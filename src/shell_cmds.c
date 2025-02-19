@@ -10,6 +10,8 @@
 // gets user input and splits it up into 2 string arrays which are stored in the userInput struct
 void getUserInput(struct userInput* input) {
 
+    input->commands = malloc(MAX_CMD_AMOUNT * sizeof(char *));
+
     // initializes values for getline
     char *line = NULL;
     size_t len = 0;
@@ -19,63 +21,81 @@ void getUserInput(struct userInput* input) {
     printf("shelf-steam> ");
     read = getline(&line, &len, stdin);
 
-    // ensures the inputted string fits within the max allow string length
+    // ensures the inputted string fits within the max allowed string length
     if (read > MAX_CMD_LENGTH) {
-        line[MAX_CMD_LENGTH] = '\0';
+        line[MAX_CMD_LENGTH + 1] = '\0';
     }
 
     int i = 0;
     char *token;
     char *line_ptr = line; // uses pointer so line can be freed later
-    bool is_redirect = false; // keeps track if the "<" symbols has been seen
+    input->is_redirect = false; // assume no redirects before checking
+    bool redirect_error_detect = false; // used to detect if there are 2 redirects
     while ((token = strsep(&line_ptr, " \t\n")) != NULL) {
         // continues if token is not the end of a string
         if (*token == '\0') {
             continue;
         }
 
-        // if the "<" string is seen, the next user inputs are for input redirection
+        // if the "<" operator is seen, the next user input is a redirection
         if (!strcmp(token, "<")) {
-            is_redirect = true;
+
+            // error if user types the "<" operator more than once
+            if (input->is_redirect) {
+                handleError(0);
+            }
+
+            input->is_redirect = true;
             input->commands_size = i; // keeps track of commands array size
             i = 0;
             continue;
         }
 
-        // if an input string is not a redirect, it is put in the commands array
-        else if (!is_redirect) {
-            strncpy(input->commands[i], token, MAX_CMD_LENGTH);
+        // saves redirect
+        else if (input->is_redirect) {
+
+            // error if user types 2 redirects or redirect is the "<" operator
+            if (redirect_error_detect) {
+                handleError(0);
+            }
+
+            strncpy(input->redirect, token, MAX_CMD_LENGTH);
+            redirect_error_detect = true;
+        }
+        
+        // cmd is saved in array
+        else {
+            input->commands[i] = malloc(strlen(token) + 1);
+            strcpy(input->commands[i], token);
         }
 
-        // if an input string is a redirect, it is put in the redirect array
-        else if (is_redirect) {
-            strncpy(input->std_redirect[i], token, MAX_CMD_LENGTH);
-        }
-        
-        // stops reading if
-        if (i >= MAX_CMD_AMOUNT) {
-            break;
-        }
-        
         i++;
     }
 
-    if (is_redirect) {
-        input->std_redirect_size = i; // keeps track of std redirect array size
+    // error if no redirect was specified after the "<" operand
+    if (!redirect_error_detect && input->is_redirect) {
+        handleError(0);
     }
 
-    else {
+    if (!input->is_redirect) {
         input->commands_size = i; // keeps track of commands array size
-        input->std_redirect_size = 0; // keeps track of std redirect array size
     }
+
+    input->commands[input->commands_size] = NULL; // adds NULL to the end of the commands for easier use of execvp later
 
     free(line);
 }
 
-void lsCommand(const char *dir_path) {
-    DIR *dir = opendir(dir_path);  // open directory
-    if (dir == NULL) {
-        perror("opendir");
+
+// prints all games and their infos
+void lsCommand(char *dir) {
+
+    char *dir_new = "/bin/"; 
+    strcatReplace(&dir, &dir_new);
+
+    DIR *dir_ptr = opendir(dir_new);  // opens directory
+    if (dir_ptr == NULL) {
+        printf("(empty)");
         return;
     }
 
@@ -84,7 +104,7 @@ void lsCommand(const char *dir_path) {
     int count = 0;
 
     // counts the number of entries
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir_ptr)) != NULL) {
         if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
             entries = realloc(entries, sizeof(struct dirent *) * (count + 1));
             entries[count] = entry;
@@ -95,15 +115,35 @@ void lsCommand(const char *dir_path) {
     // sorts them lexicographically
     qsort(entries, count, sizeof(struct dirent *), compareEntries);
 
-    // prints the sorted entries
-    for (int i = 0; i < count; i++) {
-        printf("%s\n", entries[i]->d_name);
+    // print all files and their info
+    if (count > 0) {
+        for (int i = 0; i < count; i++) {
+            // ignores hidden metadata files (in this case for macOS)
+            if (!strcmp(entries[i]->d_name, ".DS_Store")) {
+                continue;
+            }
+
+            printf("%s: ", entries[i]->d_name);
+            fflush(stdout); // ensures output is shown before process starts
+
+            char *args[1024] = {entries[i]->d_name, "--help"};
+            runProcess(dir, args, false, "");
+        }
+    }
+
+    // lets user know if file is empty
+    else {
+        printf("(empty)");
     }
 
     free(entries);
-    closedir(dir);
+    closedir(dir_ptr);
 }
 
+// used to launch a game or replay a recorded game
+void launchGame(char dir[PATH_MAX + 1], char **commands, bool is_redirect, char redirect[MAX_CMD_LENGTH + 1]) {
+    runProcess(dir, commands, is_redirect, redirect); // runs the game
+}
 
 void handleError(bool is_exit) {
     char error_message[30] = "An error has occurred\n";
@@ -114,4 +154,6 @@ void handleError(bool is_exit) {
     if (is_exit) {
         exit(1);
     }
+
+    longjmp(errorJump, 1); // jumps to the start of the while loop
 }
