@@ -50,12 +50,7 @@ void shellLoop(char dir[PATH_MAX + 1]) {
         }
 
         else if (!strcmp(cmds[0], "ls")) {
-            char dir_new[PATH_MAX + 1] = "/src"; 
-            strcatReplace(dir, dir_new);
-
-            lsCommand(dir_new);
-            
-            printf("\nNEEDS TO BE IMPLEMENTED (needs to be able to do --help)\n");
+            lsCommand(dir);
         }
 
         else if (!strcmp(cmds[0], "test")) {
@@ -63,10 +58,10 @@ void shellLoop(char dir[PATH_MAX + 1]) {
         }
 
         else {
-            // checks if the first argument is a valid game name
-            char dir_temp[PATH_MAX + 1] = "/bin/"; 
-            strcatReplace(dir, dir_temp);
-            if (isFileInDirectory(cmds[0], dir_temp)) {
+            // launches games
+            char *dir_temp = "/bin/"; 
+            strcatReplace(&dir, &dir_temp);
+            if (isFileInDirectory(cmds[0], dir_temp)) { // checks if the first argument is a valid game name
                 launchGame(dir, cmds, is_rdt, input->redirect);
             } 
 
