@@ -21,18 +21,19 @@ void shellInitialize(int argc, char *argv[], char dir[PATH_MAX + 1]) {
 }
 
 void shellLoop(char dir[PATH_MAX + 1]) {
-    while(1) {
+    setjmp(errorJump); // if a non exiting error is found, code jumps to here
+    
+    while(true) {
 
         struct userInput* input = malloc(sizeof(struct userInput));
         getUserInput(input); // gets user input
 
-        printInput(input); // DELETE LATER
+        // printInput(input); // DELETE LATER
         
         // pointers here are used as simpler access to input
-        const char (*cmds)[MAX_CMD_LENGTH + 1] = input->commands;
+        char **cmds = input->commands;
         const int cmds_size = input->commands_size;
-        const char (*rdt)[MAX_CMD_LENGTH + 1] = input->std_redirect;
-        const int rdt_size = input->std_redirect_size;
+        const bool is_rdt = input->is_redirect;
 
         // exits the program is user types "exit"
         if (!strcmp(cmds[0], "exit")) {
@@ -41,7 +42,7 @@ void shellLoop(char dir[PATH_MAX + 1]) {
 
         else if (!strcmp(cmds[0], "path")) {
             // path command must have 1 argument
-            if (cmds_size != 2 || rdt_size != 0) {
+            if (cmds_size != 2 || is_rdt) {
                 handleError(1);
             }
             
@@ -57,25 +58,22 @@ void shellLoop(char dir[PATH_MAX + 1]) {
             printf("\nNEEDS TO BE IMPLEMENTED (needs to be able to do --help)\n");
         }
 
-        // command: game_name arguments...
-        else if (!strcmp(cmds[0], "test1")) {
-            char dir_new[PATH_MAX + 1] = "/bin/"; 
-            strcatReplace(dir, dir_new); 
-            strcat(dir_new, cmds[0]); // adds the game name to the end of the list
-
-            printf("%s", dir_new);
-            
-            // char *args[] = {dir_new, "argument1", NULL};
-            // execvp(dir_new, args);
-            // perror("execvp failed");
-        }
-
         else if (!strcmp(cmds[0], "test")) {
-            printf("\nthis is a test\n");
+            printf("this is a test\n");
         }
 
         else {
-            
+            // checks if the first argument is a valid game name
+            char dir_temp[PATH_MAX + 1] = "/bin/"; 
+            strcatReplace(dir, dir_temp);
+            if (isFileInDirectory(cmds[0], dir_temp)) {
+                launchGame(dir, cmds, is_rdt, input->redirect);
+            } 
+
+            // unknown arguments are invalid and exit the program
+            else {
+                handleError(1);
+            }
         }
 
         free(input);
