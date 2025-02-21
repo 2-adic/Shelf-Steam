@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "shell_cmds.h"
+#include "config.h"
 
 #include <dirent.h>
 #include <stdio.h>
@@ -7,6 +8,8 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <ctype.h>
 
 // prints user arguments for testing purposes
 void printInput(struct userInput* input) {
@@ -17,17 +20,6 @@ void printInput(struct userInput* input) {
 
     printf("\nRedirects: %d\n", input->is_redirect);
     printf("%s\n", input->redirect);
-}
-
-// has strcat functionality, but replaces the second string
-void strcatReplace(char **str1, char **replace) {
-
-    char *str_new = (char *)malloc(strlen(*str1) + strlen(*replace) + 1);
-    strcpy(str_new, *str1);
-
-    strcat(str_new, *replace); // combines strings
-
-    *replace = str_new;
 }
 
 // qsort comparison function
@@ -55,11 +47,11 @@ bool isFileInDirectory(const char *filename, const char *dirpath) {
     return false;
 }
 
-void runProcess(char dir[PATH_MAX + 1], char **commands, bool is_redirect, char redirect[MAX_CMD_LENGTH + 1]) {
+void runProcess(char *dir, char **commands, bool is_redirect, const char *redirect, bool is_ls) {
     
     // creates full path for process
-    char *dir_temp = "/bin/";
-    strcatReplace(&dir, &dir_temp);
+    char *dir_temp = malloc(strlen(dir) + strlen(commands[0]) + 1);
+    strcpy(dir_temp, dir);
     strcat(dir_temp, commands[0]); // game full path
 
     pid_t pid = fork(); // creates new process that game will run on
@@ -89,7 +81,9 @@ void runProcess(char dir[PATH_MAX + 1], char **commands, bool is_redirect, char 
 
         // runs the specified process
         execvp(dir_temp, commands);
-        handleError(1); // error if execvp fails (exits out of child process)
+        printf("(empty)\n");
+        fflush(stdout);
+        exit(1); // error if execvp fails (exits out of child process)
     } 
     
     // parent waits for child process to finish
@@ -97,4 +91,28 @@ void runProcess(char dir[PATH_MAX + 1], char **commands, bool is_redirect, char 
         int status;
         waitpid(pid, &status, 0);
     }
+
+    free(dir_temp);
+}
+
+bool isAllWhitespace(const char *str) {
+    while (*str) {
+        if (!isspace((unsigned char)*str)) {
+            return 0; // non-whitespace char
+        }
+
+        str++;
+    }
+
+    return 1;
+}
+
+bool isDirectoryValid(const char *dir) {
+    DIR *dir_ptr = opendir(dir);
+    if (dir_ptr) {
+        closedir(dir_ptr);
+        return 1; // valid directory
+    }
+
+    return 0; // invalid directory
 }
