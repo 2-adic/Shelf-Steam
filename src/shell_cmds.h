@@ -12,7 +12,7 @@ void getUserInput(struct userInput* input);
 void lsCommand(char *dir);
 
 // used to launch a game or replay a past game
-void launchGame(char dir[PATH_MAX + 1], char **commands, bool is_redirect, char redirect[MAX_CMD_LENGTH + 1]);
+void launchGame(char *dir, char **commands, bool is_redirect, const char *redirect);
 
 // displays error from incorrect input
 void handleError(bool is_exit);
