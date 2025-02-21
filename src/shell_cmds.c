@@ -19,7 +19,13 @@ void getUserInput(struct userInput* input) {
 
     // reads user input
     printf("shelf-steam> ");
+    fflush(stdout); // ensures shell line is shown before anything else
     read = getline(&line, &len, stdin);
+
+    // jumps to start of while loop if string only contains white spaces
+    if (isAllWhitespace(line)) {
+        longjmp(errorJump, 1); // chars are all whitespace (not considered an error)
+    }
 
     // ensures the inputted string fits within the max allowed string length
     if (read > MAX_CMD_LENGTH) {
@@ -90,12 +96,8 @@ void getUserInput(struct userInput* input) {
 // prints all games and their infos
 void lsCommand(char *dir) {
 
-    char *dir_new = "/bin/"; 
-    strcatReplace(&dir, &dir_new);
-
-    DIR *dir_ptr = opendir(dir_new);  // opens directory
+    DIR *dir_ptr = opendir(dir);  // opens directory
     if (dir_ptr == NULL) {
-        printf("(empty)");
         return;
     }
 
@@ -127,13 +129,8 @@ void lsCommand(char *dir) {
             fflush(stdout); // ensures output is shown before process starts
 
             char *args[1024] = {entries[i]->d_name, "--help"};
-            runProcess(dir, args, false, "");
+            runProcess(dir, args, false, "", true);
         }
-    }
-
-    // lets user know if file is empty
-    else {
-        printf("(empty)");
     }
 
     free(entries);
@@ -141,8 +138,8 @@ void lsCommand(char *dir) {
 }
 
 // used to launch a game or replay a recorded game
-void launchGame(char dir[PATH_MAX + 1], char **commands, bool is_redirect, char redirect[MAX_CMD_LENGTH + 1]) {
-    runProcess(dir, commands, is_redirect, redirect); // runs the game
+void launchGame(char *dir, char **commands, bool is_redirect, const char *redirect) {
+    runProcess(dir, commands, is_redirect, redirect, false); // runs the game
 }
 
 void handleError(bool is_exit) {
