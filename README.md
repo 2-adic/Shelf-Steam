@@ -32,12 +32,12 @@ path /full/path/to/compiled-games/
 ```
 
 The `ls` command lists all files found in the selected directory with a description of each game.<br>
-*Games descriptions are obtained by passing the `--help` argument into a compiled game.*
+*Game descriptions are obtained by passing the `--help` argument into each compiled game.*
 ```
 ls
 ```
 
-Games can be run by typing its compiled file name with any arguments.
+Games are executed by entering the compiled file name along with any arguments.
 ```
 addition --seed 0
 ```
