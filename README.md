@@ -39,13 +39,13 @@ ls
 
 Games are executed by entering the compiled file name along with any arguments.
 ```
-addition --seed 0
+add --seed 0
 ```
 
 A game can be "replayed" by using stored inputs from a file to automatically run the game.<br>
 *The `<` operator is used to specify the file.*
 ```
-addition --seed 0 < /full/path/to/games/replay/add.log
+add --seed 0 < /full/path/to/games/replay/add.log
 ```
   
 # How to Build
