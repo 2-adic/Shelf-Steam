@@ -22,6 +22,23 @@ void printInput(struct userInput* input) {
     printf("%s\n", input->redirect);
 }
 
+// checks if a string ends in the char '/'
+bool isStringEndSlash(const char *str) {
+    if (str == NULL || *str == '\0') {
+        return false; // handles empty and NULL strings
+    }
+    
+    size_t len = strlen(str);
+    return str[len - 1] == '/';
+}
+
+// adds the '/' char to the end of a directory if a user doesn't add one
+void correctDirectory(char *dir) {
+    if (!isStringEndSlash(dir)) {
+        strcat(dir, "/");
+    }
+}
+
 // qsort comparison function
 int compareEntries(const void *a, const void *b) {
     return strcmp((*(struct dirent **)a)->d_name, (*(struct dirent **)b)->d_name);
@@ -52,6 +69,9 @@ void runProcess(char *dir, char **commands, bool is_redirect, const char *redire
     // creates full path for process
     char *dir_temp = malloc(strlen(dir) + strlen(commands[0]) + 1);
     strcpy(dir_temp, dir);
+
+    correctDirectory(dir_temp); // adds '/' char to the end of the dir if needed
+
     strcat(dir_temp, commands[0]); // game full path
 
     pid_t pid = fork(); // creates new process that game will run on
