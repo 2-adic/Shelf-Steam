@@ -8,7 +8,7 @@ Shelf-Steam is a custom shell designed for launching and playing terminal-based 
 
 Shelf-Steam is designed for Linux-based systems and may not be compatible with other operating systems.
 
-This project was independently developed for an Operating Systems class.
+This project was independently developed for an Operating Systems class. It is published for educational and portfolio purposes only. Please do not use this code for academic coursework.
 
 # How to Use
 
